@@ -34,11 +34,8 @@ pub fn generate_cpu_trace<F: RichField>(
         steps.resize(trace_len, steps.last().unwrap().to_owned());
     }
 
-    let ext_trace_len = if !trace_len.is_power_of_two() {
-        trace_len.next_power_of_two()
-    } else {
-        trace_len
-    };
+    let ext_trace_len = trace_len.next_power_of_two();
+
     let mut trace: Vec<Vec<F>> = vec![vec![F::ZERO; ext_trace_len]; cpu::NUM_CPU_COLS];
     for (i, (s, r)) in steps.iter().zip(raw_insts.iter()).enumerate() {
         // Context related columns.

@@ -9,15 +9,8 @@ pub fn generate_memory_trace<F: RichField>(
     cells: &[MemoryTraceCell],
 ) -> [Vec<F>; memory::NUM_MEM_COLS] {
     let mut num_filled_row_len = cells.len();
-    let num_padded_rows = if !num_filled_row_len.is_power_of_two() || num_filled_row_len < 2 {
-        if num_filled_row_len < 2 {
-            2
-        } else {
-            num_filled_row_len.next_power_of_two()
-        }
-    } else {
-        num_filled_row_len
-    };
+
+    let num_padded_rows = 2.max(num_filled_row_len.next_power_of_two());
 
     let mut trace: Vec<Vec<F>> = vec![vec![F::ZERO; num_padded_rows]; memory::NUM_MEM_COLS];
     for (i, c) in cells.iter().enumerate() {
@@ -63,32 +56,30 @@ pub fn generate_memory_trace<F: RichField>(
     }
 
     // Pad trace to power of two.
-    if num_padded_rows != num_filled_row_len {
-        let p = F::from_canonical_u64(0) - F::from_canonical_u64(1);
-        let mut addr: F = if trace[memory::COL_MEM_IS_RW][num_filled_row_len - 1] == F::ONE {
-            let span = F::from_canonical_u64(2_u64.pow(32).sub(1));
-            p - span
+    let p = F::from_canonical_u64(0) - F::from_canonical_u64(1);
+    let mut addr: F = if trace[memory::COL_MEM_IS_RW][num_filled_row_len - 1] == F::ONE {
+        let span = F::from_canonical_u64(2_u64.pow(32).sub(1));
+        p - span
+    } else {
+        trace[memory::COL_MEM_ADDR][num_filled_row_len - 1] + F::ONE
+    };
+
+    let mut is_first_pad_row = true;
+    for i in num_filled_row_len..num_padded_rows {
+        trace[memory::COL_MEM_ADDR][i] = addr;
+        trace[memory::COL_MEM_IS_WRITE][i] = F::ONE;
+        trace[memory::COL_MEM_DIFF_ADDR][i] = if is_first_pad_row {
+            addr - trace[memory::COL_MEM_ADDR][num_filled_row_len - 1]
         } else {
-            trace[memory::COL_MEM_ADDR][num_filled_row_len - 1] + F::ONE
+            F::ONE
         };
+        trace[memory::COL_MEM_DIFF_ADDR_INV][i] = trace[memory::COL_MEM_DIFF_ADDR][i].inverse();
+        trace[memory::COL_MEM_DIFF_ADDR_COND][i] = p - addr;
+        trace[memory::COL_MEM_REGION_PROPHET][i] = F::ONE;
+        trace[memory::COL_MEM_RC_VALUE][i] = trace[memory::COL_MEM_DIFF_ADDR_COND][i];
 
-        let mut is_first_pad_row = true;
-        for i in num_filled_row_len..num_padded_rows {
-            trace[memory::COL_MEM_ADDR][i] = addr;
-            trace[memory::COL_MEM_IS_WRITE][i] = F::ONE;
-            trace[memory::COL_MEM_DIFF_ADDR][i] = if is_first_pad_row {
-                addr - trace[memory::COL_MEM_ADDR][num_filled_row_len - 1]
-            } else {
-                F::ONE
-            };
-            trace[memory::COL_MEM_DIFF_ADDR_INV][i] = trace[memory::COL_MEM_DIFF_ADDR][i].inverse();
-            trace[memory::COL_MEM_DIFF_ADDR_COND][i] = p - addr;
-            trace[memory::COL_MEM_REGION_PROPHET][i] = F::ONE;
-            trace[memory::COL_MEM_RC_VALUE][i] = trace[memory::COL_MEM_DIFF_ADDR_COND][i];
-
-            addr += F::ONE;
-            is_first_pad_row = false
-        }
+        addr += F::ONE;
+        is_first_pad_row = false
     }
 
     trace.try_into().unwrap_or_else(|v: Vec<Vec<F>>| {

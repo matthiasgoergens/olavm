@@ -199,15 +199,7 @@ pub fn generate_bitwise_trace<F: RichField>(
 
 pub fn generate_cmp_trace<F: RichField>(cells: &[CmpRow]) -> [Vec<F>; cmp::COL_NUM_CMP] {
     let trace_len = cells.len();
-    let ext_trace_len = if !trace_len.is_power_of_two() || trace_len < 2 {
-        if trace_len < 2 {
-            2
-        } else {
-            trace_len.next_power_of_two()
-        }
-    } else {
-        trace_len
-    };
+    let ext_trace_len = 2.max(trace_len.next_power_of_two());
 
     let mut trace: Vec<Vec<F>> = vec![vec![F::ZERO; ext_trace_len]; cmp::COL_NUM_CMP];
     for (i, c) in cells.iter().enumerate() {
@@ -221,13 +213,11 @@ pub fn generate_cmp_trace<F: RichField>(cells: &[CmpRow]) -> [Vec<F>; cmp::COL_N
     }
 
     // Pad trace to power of two.
-    if trace_len != ext_trace_len {
-        for i in trace_len..ext_trace_len {
-            trace[COL_CMP_OP0][i] = F::ONE;
-            trace[COL_CMP_GTE][i] = F::ONE;
-            trace[COL_CMP_ABS_DIFF][i] = F::ONE;
-            trace[COL_CMP_ABS_DIFF_INV][i] = F::ONE;
-        }
+    for i in trace_len..ext_trace_len {
+        trace[COL_CMP_OP0][i] = F::ONE;
+        trace[COL_CMP_GTE][i] = F::ONE;
+        trace[COL_CMP_ABS_DIFF][i] = F::ONE;
+        trace[COL_CMP_ABS_DIFF_INV][i] = F::ONE;
     }
     trace.try_into().unwrap_or_else(|v: Vec<Vec<F>>| {
         panic!(
@@ -243,15 +233,7 @@ pub fn generate_rc_trace<F: RichField>(
 ) -> [Vec<F>; rangecheck::COL_NUM_RC] {
     let trace_len = cells.len();
     let max_trace_len = trace_len.max(rangecheck::RANGE_CHECK_U16_SIZE);
-    let ext_trace_len = if !max_trace_len.is_power_of_two() || max_trace_len < 2 {
-        if max_trace_len < 2 {
-            2
-        } else {
-            max_trace_len.next_power_of_two()
-        }
-    } else {
-        max_trace_len
-    };
+    let ext_trace_len = 2.max(max_trace_len.next_power_of_two());
 
     let mut trace: Vec<Vec<F>> = vec![vec![F::ZERO; ext_trace_len]; rangecheck::COL_NUM_RC];
     for (i, c) in cells.iter().enumerate() {
