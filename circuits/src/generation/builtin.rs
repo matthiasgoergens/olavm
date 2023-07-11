@@ -41,15 +41,7 @@ pub fn generate_bitwise_trace<F: RichField>(
         .max(bitwise::RANGE_CHECK_U8_SIZE)
         .max(bitwise::BITWISE_U8_SIZE);
 
-    let ext_trace_len = if !max_trace_len.is_power_of_two() || max_trace_len < 2 {
-        if max_trace_len < 2 {
-            2
-        } else {
-            max_trace_len.next_power_of_two()
-        }
-    } else {
-        max_trace_len
-    };
+    let ext_trace_len = 2.max(max_trace_len.next_power_of_two());
 
     let mut trace: Vec<Vec<F>> = vec![vec![F::ZERO; ext_trace_len]; bitwise::COL_NUM_BITWISE];
     for (i, c) in cells.iter().enumerate() {
