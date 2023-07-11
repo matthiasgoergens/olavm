@@ -155,6 +155,7 @@ pub fn generate_cpu_trace<F: RichField>(
         Challenger::<F, <PoseidonGoldilocksConfig as GenericConfig<2>>::Hasher>::new();
     challenger.observe_elements(&trace[cpu::COL_RAW_INST]);
     let beta = challenger.get_challenge();
+    let beta = F::ZERO;
 
     // Compress raw_pc and raw_inst columns into one column: COL_ZIP_RAW.
     // Compress pc + inst columns into one column: COL_ZIP_EXED.
